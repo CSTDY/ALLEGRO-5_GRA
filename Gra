@@ -15,6 +15,22 @@ float PODEST_X = 75;
 float PODEST_Y = OBRAZ_H - 75;
 ALLEGRO_BITMAP *podest[15];
 
+ALLEGRO_BITMAP *grafika = NULL;
+float grafika_x = OBRAZ_W / 20.0 - ROZMIAR_GRAFIKI / 2.0;
+float grafika_y = OBRAZ_H - ROZMIAR_GRAFIKI;
+const float ruch = 4.0;
+bool kierunek = false;
+
+bool skok = false;
+float pr_skoku = 14;
+const float grawitacja = 1;
+float VELX=0, VELY=0;
+
+
+bool przerysuj = true;
+bool wyjście = false;
+void PODEST_KOLIZJA(int x, int y);
+
 bool KOLIZJA(int b1_x, int b1_y, int b1_w, int b1_h, int b2_x, int b2_y, int b2_w, int b2_h)
 {
 	if ((b1_x > b2_x + b2_w - 1) || // is b1 on the right side of b2?
@@ -34,20 +50,7 @@ int main()
 	ALLEGRO_DISPLAY *okno = NULL;
 	ALLEGRO_EVENT_QUEUE *kolejka = NULL;
 	ALLEGRO_TIMER *stoper = NULL;
-	ALLEGRO_BITMAP *grafika = NULL;
-	float grafika_x = OBRAZ_W / 20.0 - ROZMIAR_GRAFIKI / 2.0;
-	float grafika_y = OBRAZ_H-ROZMIAR_GRAFIKI;
-	const float ruch = 4.0;
-	bool kierunek= false ;
-
-	bool skok = false;
-	float pr_skoku = 14;
-	const float grawitacja = 1;
-	float VELX, VELY;
-	VELX = VELY = 0;
-
-	bool przerysuj = true;
-	bool wyjście = false;
+	
 	if (!al_init()) {
 		cout << "Nie znaleziono biblioteki ALLEGRO5\n";
 			return -1;
@@ -195,351 +198,36 @@ int main()
 			skok = (grafika_y + ROZMIAR_GRAFIKI >= OBRAZ_H);
 			if (skok)
 				grafika_y = OBRAZ_H - ROZMIAR_GRAFIKI;
-			//PODEST 1
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X, PODEST_Y + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X, PODEST_Y -  PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y);
-				if (skok)
-					grafika_y = PODEST_Y - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 2
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X+75, PODEST_Y-75 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X+75, PODEST_Y-75 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y-75);
-				if (skok)
-					grafika_y = PODEST_Y-75 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 3
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 150, PODEST_Y - 150 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 150, PODEST_Y - 150 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 150);
-				if (skok)
-					grafika_y = PODEST_Y - 150 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 4
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 75, PODEST_Y - 225 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 75, PODEST_Y - 225 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 225);
-				if (skok)
-					grafika_y = PODEST_Y - 225 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 5
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 150, PODEST_Y - 300 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 150, PODEST_Y - 300 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 300);
-				if (skok)
-					grafika_y = PODEST_Y - 300 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 6
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 225, PODEST_Y - 375 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 225, PODEST_Y - 375 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 375);
-				if (skok)
-					grafika_y = PODEST_Y - 375 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 7
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 300, PODEST_Y - 450 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 300, PODEST_Y - 450 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 450);
-				if (skok)
-					grafika_y = PODEST_Y - 450 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 8
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 375, PODEST_Y - 525 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 375, PODEST_Y - 525 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 525);
-				if (skok)
-					grafika_y = PODEST_Y - 525 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 9
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 450, PODEST_Y - 525 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 450, PODEST_Y - 525 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 525);
-				if (skok)
-					grafika_y = PODEST_Y - 525 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 10
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 525, PODEST_Y - 460 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 525, PODEST_Y - 460 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 460);
-				if (skok)
-					grafika_y = PODEST_Y - 460 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 11
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 600, PODEST_Y - 475 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 600, PODEST_Y - 475 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 475);
-				if (skok)
-					grafika_y = PODEST_Y - 475 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 12
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 675, PODEST_Y - 400 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 675, PODEST_Y - 400 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 400);
-				if (skok)
-					grafika_y = PODEST_Y - 400 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 13
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 750, PODEST_Y - 475 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 750, PODEST_Y - 475 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 475);
-				if (skok)
-					grafika_y = PODEST_Y - 475 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 14
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 825, PODEST_Y - 400 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 825, PODEST_Y - 400 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 400);
-				if (skok)
-					grafika_y = PODEST_Y - 400 - ROZMIAR_GRAFIKI;
-			}
-			//PODEST 15
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 870, PODEST_Y - 475 + PODEST_H, PODEST_W, PODEST_H)) {
-				if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-				else if (kierunek) {
-					VELY = pr_skoku;
-					skok = false;
-					kierunek = false;
-				}
-			}
-			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 870, PODEST_Y - 475 - PODEST_H, PODEST_W, PODEST_H)) {
-				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 475);
-				if (skok)
-					grafika_y = PODEST_Y - 475 - ROZMIAR_GRAFIKI;
-			}
+			//PODEST 1 x = 0, y = 0
+			PODEST_KOLIZJA(0, 0);
+			//PODEST 2 x = 75, y = 75
+			PODEST_KOLIZJA(75, 75);
+			//PODEST 3 x = 150, y = 150
+			PODEST_KOLIZJA(150, 150);
+			//PODEST 4 x = 75, y = 225
+			PODEST_KOLIZJA(75, 225);
+			//PODEST 5 x = 150, y = 300
+			PODEST_KOLIZJA(150, 300);
+			//PODEST 6 x = 225, y = 375
+			PODEST_KOLIZJA(225, 375);
+			//PODEST 7 x = 300, y = 450
+			PODEST_KOLIZJA(300, 450);
+			//PODEST 8 x = 375, y = 525
+			PODEST_KOLIZJA(375, 525);
+			//PODEST 9 x = 450, y = 525
+			PODEST_KOLIZJA(450, 525);
+			//PODEST 10 x = 525, y = 460
+			PODEST_KOLIZJA(525, 460);
+			//PODEST 11 x = 600, Y = 475
+			PODEST_KOLIZJA(600, 475);
+			//PODEST 12 x = 600, y = 400
+			PODEST_KOLIZJA(675, 400);
+			//PODEST 13 x = 750, y = 475
+			PODEST_KOLIZJA(750, 475);
+			//PODEST 14 x = 825, y = 400
+			PODEST_KOLIZJA(825, 400);
+			//PODEST 15 x = 870, y = 475
+			PODEST_KOLIZJA(870, 475);
 		}
 		else if (zdarzenie.type == ALLEGRO_EVENT_DISPLAY_CLOSE ) {
 			break;
@@ -594,4 +282,29 @@ int main()
 	al_destroy_display(okno);
 	al_destroy_event_queue(kolejka);
 	return 0;
+}
+
+void PODEST_KOLIZJA(int x, int y) {
+	if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + x, PODEST_Y - y + PODEST_H, PODEST_W, PODEST_H)) {
+		if (kierunek) {
+			VELY = pr_skoku;
+			skok = false;
+			kierunek = false;
+		}
+		else if (kierunek) {
+			VELY = pr_skoku;
+			skok = false;
+			kierunek = false;
+		}
+		else if (kierunek) {
+			VELY = pr_skoku;
+			skok = false;
+			kierunek = false;
+		}
+	}
+	if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + x, PODEST_Y - y - PODEST_H, PODEST_W, PODEST_H)) {
+		skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - y);
+		if (skok)
+			grafika_y = PODEST_Y - y - ROZMIAR_GRAFIKI;
+	}
 }
