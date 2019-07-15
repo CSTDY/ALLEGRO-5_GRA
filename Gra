@@ -1,0 +1,597 @@
+#include "pch.h"
+#include <iostream>
+#include <allegro5/allegro.h>
+
+
+using namespace std;
+int i;
+const float FPS = 60;
+const int OBRAZ_W = 1024;
+const int OBRAZ_H = 640;
+const int ROZMIAR_GRAFIKI = 32;
+const int PODEST_H = 10;
+const int PODEST_W = 50;
+float PODEST_X = 75;
+float PODEST_Y = OBRAZ_H - 75;
+ALLEGRO_BITMAP *podest[15];
+
+bool KOLIZJA(int b1_x, int b1_y, int b1_w, int b1_h, int b2_x, int b2_y, int b2_w, int b2_h)
+{
+	if ((b1_x > b2_x + b2_w - 1) || // is b1 on the right side of b2?
+		(b1_y > b2_y + b2_h - 1) || // is b1 under b2?
+		(b2_x > b1_x + b1_w - 1) || // is b2 on the right side of b1?
+		(b2_y > b1_y + b1_h - 1))   // is b2 under b1?
+	{
+		// no collision
+		return false;
+	}
+
+	// collision
+	return true;
+}
+int main()
+{
+	ALLEGRO_DISPLAY *okno = NULL;
+	ALLEGRO_EVENT_QUEUE *kolejka = NULL;
+	ALLEGRO_TIMER *stoper = NULL;
+	ALLEGRO_BITMAP *grafika = NULL;
+	float grafika_x = OBRAZ_W / 20.0 - ROZMIAR_GRAFIKI / 2.0;
+	float grafika_y = OBRAZ_H-ROZMIAR_GRAFIKI;
+	const float ruch = 4.0;
+	bool kierunek= false ;
+
+	bool skok = false;
+	float pr_skoku = 14;
+	const float grawitacja = 1;
+	float VELX, VELY;
+	VELX = VELY = 0;
+
+	bool przerysuj = true;
+	bool wyjście = false;
+	if (!al_init()) {
+		cout << "Nie znaleziono biblioteki ALLEGRO5\n";
+			return -1;
+	}
+	if (!al_install_keyboard()) {
+		cout << "Nie udało się zamontować klawiatury w programie\n";
+		return -1;
+	}
+	stoper = al_create_timer(1.0 / FPS);
+	if (!stoper) {
+		cout << "Nie udało się stworzyć stopera\n";
+		return -1;
+	}
+	okno = al_create_display(1024, 640);
+	if (!okno) {
+		cout << "Nie udało się otworzyć okna\n";
+		al_destroy_timer(stoper);
+		return -1;
+	}
+	grafika = al_create_bitmap(ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI);
+	if (!grafika) {
+		cout << "Nie udało się stworzyć grafiki!\n";
+		al_destroy_display(okno);
+		al_destroy_timer(stoper);
+		return -1;
+	}
+
+	al_set_target_bitmap(grafika);
+	al_clear_to_color(al_map_rgb(255, 0, 0));
+	al_set_target_bitmap(al_get_backbuffer(okno));
+	
+	podest[0] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[0]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[1] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[1]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[2] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[2]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[3] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[3]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[4] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[4]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[5] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[5]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[6] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[6]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[7] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[7]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[8] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[8]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[9] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[9]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[10] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[10]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[11] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[11]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[12] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[12]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[13] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[13]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	podest[14] = al_create_bitmap(PODEST_W, PODEST_H);
+	al_set_target_bitmap(podest[14]);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+
+	al_set_target_bitmap(al_get_backbuffer(okno));
+
+	kolejka = al_create_event_queue();
+	if (!kolejka) {
+		cout << "Nie udało się stworzyć kolejki zdarzeń\n";
+		al_destroy_display(okno);
+		al_destroy_timer(stoper);
+		al_destroy_bitmap(grafika);
+		al_destroy_bitmap(podest[0]);
+		al_destroy_bitmap(podest[1]);
+		return -1;
+	}
+	al_register_event_source(kolejka, al_get_display_event_source(okno));
+
+	al_register_event_source(kolejka, al_get_timer_event_source(stoper));
+
+	al_register_event_source(kolejka, al_get_keyboard_event_source());
+
+	ALLEGRO_KEYBOARD_STATE stan_kl;
+	
+	al_flip_display();
+	al_start_timer(stoper);
+	while (!wyjście) {
+		ALLEGRO_EVENT zdarzenie;
+		al_wait_for_event(kolejka, &zdarzenie);
+		al_get_keyboard_state(&stan_kl);
+
+		if (zdarzenie.type == ALLEGRO_EVENT_TIMER) {
+			if (al_key_down(&stan_kl, ALLEGRO_KEY_LEFT) && grafika_x >= ruch ) {
+				VELX = -ruch;
+				kierunek = true;
+			}
+			else if (al_key_down(&stan_kl, ALLEGRO_KEY_RIGHT) && grafika_x <= OBRAZ_W - ROZMIAR_GRAFIKI - ruch ) {
+				VELX = ruch;
+				kierunek = true;
+			}
+			else
+				VELX = 0;
+
+			if (al_key_down(&stan_kl, ALLEGRO_KEY_UP) && grafika_y >= pr_skoku && skok ) {
+				VELY = -pr_skoku;
+				skok = false;
+				kierunek = true;
+			}
+			przerysuj = true;
+			if (!skok)
+				VELY += grawitacja;
+			else
+				VELY = 0;
+
+			grafika_x += VELX;
+			grafika_y += VELY;
+
+			skok = (grafika_y + ROZMIAR_GRAFIKI >= OBRAZ_H);
+			if (skok)
+				grafika_y = OBRAZ_H - ROZMIAR_GRAFIKI;
+			//PODEST 1
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X, PODEST_Y + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X, PODEST_Y -  PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y);
+				if (skok)
+					grafika_y = PODEST_Y - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 2
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X+75, PODEST_Y-75 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X+75, PODEST_Y-75 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y-75);
+				if (skok)
+					grafika_y = PODEST_Y-75 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 3
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 150, PODEST_Y - 150 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 150, PODEST_Y - 150 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 150);
+				if (skok)
+					grafika_y = PODEST_Y - 150 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 4
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 75, PODEST_Y - 225 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 75, PODEST_Y - 225 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 225);
+				if (skok)
+					grafika_y = PODEST_Y - 225 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 5
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 150, PODEST_Y - 300 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 150, PODEST_Y - 300 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 300);
+				if (skok)
+					grafika_y = PODEST_Y - 300 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 6
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 225, PODEST_Y - 375 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 225, PODEST_Y - 375 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 375);
+				if (skok)
+					grafika_y = PODEST_Y - 375 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 7
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 300, PODEST_Y - 450 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 300, PODEST_Y - 450 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 450);
+				if (skok)
+					grafika_y = PODEST_Y - 450 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 8
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 375, PODEST_Y - 525 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 375, PODEST_Y - 525 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 525);
+				if (skok)
+					grafika_y = PODEST_Y - 525 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 9
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 450, PODEST_Y - 525 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 450, PODEST_Y - 525 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 525);
+				if (skok)
+					grafika_y = PODEST_Y - 525 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 10
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 525, PODEST_Y - 460 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 525, PODEST_Y - 460 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 460);
+				if (skok)
+					grafika_y = PODEST_Y - 460 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 11
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 600, PODEST_Y - 475 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 600, PODEST_Y - 475 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 475);
+				if (skok)
+					grafika_y = PODEST_Y - 475 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 12
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 675, PODEST_Y - 400 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 675, PODEST_Y - 400 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 400);
+				if (skok)
+					grafika_y = PODEST_Y - 400 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 13
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 750, PODEST_Y - 475 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 750, PODEST_Y - 475 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 475);
+				if (skok)
+					grafika_y = PODEST_Y - 475 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 14
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 825, PODEST_Y - 400 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 825, PODEST_Y - 400 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 400);
+				if (skok)
+					grafika_y = PODEST_Y - 400 - ROZMIAR_GRAFIKI;
+			}
+			//PODEST 15
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 870, PODEST_Y - 475 + PODEST_H, PODEST_W, PODEST_H)) {
+				if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+				else if (kierunek) {
+					VELY = pr_skoku;
+					skok = false;
+					kierunek = false;
+				}
+			}
+			if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + 870, PODEST_Y - 475 - PODEST_H, PODEST_W, PODEST_H)) {
+				skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - 475);
+				if (skok)
+					grafika_y = PODEST_Y - 475 - ROZMIAR_GRAFIKI;
+			}
+		}
+		else if (zdarzenie.type == ALLEGRO_EVENT_DISPLAY_CLOSE ) {
+			break;
+		}
+
+		else if (zdarzenie.type == ALLEGRO_EVENT_KEY_UP) {
+			switch (zdarzenie.keyboard.keycode) {
+			case ALLEGRO_KEY_ESCAPE:
+				wyjście = true;
+			}
+		}
+		if (przerysuj && al_is_event_queue_empty(kolejka)) {
+			przerysuj = false;
+			al_clear_to_color(al_map_rgb(0,100, 0));
+			al_draw_bitmap(podest[0], PODEST_X, PODEST_Y, 0);
+			al_draw_bitmap(podest[1], PODEST_X + 75, PODEST_Y - 75, 0);
+			al_draw_bitmap(podest[2], PODEST_X + 150, PODEST_Y - 150, 0);
+			al_draw_bitmap(podest[3], PODEST_X + 75, PODEST_Y - 225, 0);
+			al_draw_bitmap(podest[4], PODEST_X + 150, PODEST_Y - 300,0);
+			al_draw_bitmap(podest[5], PODEST_X + 225, PODEST_Y - 375, 0);
+			al_draw_bitmap(podest[6], PODEST_X + 300, PODEST_Y - 450, 0);
+			al_draw_bitmap(podest[7], PODEST_X + 375, PODEST_Y - 525, 0);
+			al_draw_bitmap(podest[8], PODEST_X + 450, PODEST_Y - 525, 0);
+			al_draw_bitmap(podest[9], PODEST_X + 525, PODEST_Y - 460, 0);
+			al_draw_bitmap(podest[10], PODEST_X + 600, PODEST_Y - 475, 0);
+			al_draw_bitmap(podest[11], PODEST_X + 675, PODEST_Y - 400, 0);
+			al_draw_bitmap(podest[12], PODEST_X + 750, PODEST_Y - 475, 0);
+			al_draw_bitmap(podest[13], PODEST_X + 825, PODEST_Y - 400, 0);
+			al_draw_bitmap(podest[14], PODEST_X + 870, PODEST_Y - 475, 0);
+			al_draw_bitmap(grafika, grafika_x, grafika_y, 0);
+			al_flip_display();
+		}
+		
+	}
+	al_destroy_bitmap(podest[0]);
+	al_destroy_bitmap(podest[1]);
+	al_destroy_bitmap(podest[2]);
+	al_destroy_bitmap(podest[3]);
+	al_destroy_bitmap(podest[4]);
+	al_destroy_bitmap(podest[5]);
+	al_destroy_bitmap(podest[6]);
+	al_destroy_bitmap(podest[7]);
+	al_destroy_bitmap(podest[8]);
+	al_destroy_bitmap(podest[9]);
+	al_destroy_bitmap(podest[10]);
+	al_destroy_bitmap(podest[11]);
+	al_destroy_bitmap(podest[12]);
+	al_destroy_bitmap(podest[13]);
+	al_destroy_bitmap(podest[14]);
+	al_destroy_bitmap(grafika);
+	al_destroy_timer(stoper);
+	al_destroy_display(okno);
+	al_destroy_event_queue(kolejka);
+	return 0;
+}
