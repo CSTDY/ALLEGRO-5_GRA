@@ -1,35 +1,206 @@
 #include "pch.h"
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <algorithm>
 #include <allegro5/allegro.h>
+#include <allegro5/allegro_image.h>
+#include <allegro5/allegro_native_dialog.h>
 
 
 using namespace std;
-int i;
+
 const float FPS = 60;
 const int OBRAZ_W = 1024;
 const int OBRAZ_H = 640;
-const int ROZMIAR_GRAFIKI = 32;
-const int PODEST_H = 10;
-const int PODEST_W = 50;
-float PODEST_X = 75;
-float PODEST_Y = OBRAZ_H - 75;
-ALLEGRO_BITMAP *podest[15];
+const int ROZMIAR_GRAFIKI = 29;
+const int TILE_ROZMIAR = 32;
 
 ALLEGRO_BITMAP *grafika = NULL;
 float grafika_x = OBRAZ_W / 20.0 - ROZMIAR_GRAFIKI / 2.0;
 float grafika_y = OBRAZ_H - ROZMIAR_GRAFIKI;
 const float ruch = 4.0;
-bool kierunek = false;
 
 bool skok = false;
 float pr_skoku = 14;
 const float grawitacja = 1;
 float VELX=0, VELY=0;
 
-
 bool przerysuj = true;
 bool wyjście = false;
-void PODEST_KOLIZJA(int x, int y);
+
+
+bool aktywny = false;
+float SX = 32, SY = 32;
+
+bool KOLIZJA(int b1_x, int b1_y, int b1_w, int b1_h, int b2_x, int b2_y, int b2_w, int b2_h);
+int LICZ_X = 0, LICZ_Y = 0, ROZM_MAPA_X, ROZM_MAPA_Y;
+
+void ZAŁADUJ_MAPĘ(const char *nazwa_pliku, int mapa[][100]);
+
+void TILE_KOLIZJA(int mapa[][100]);
+void RYSUJ_MAPĘ(int mapa[][100], ALLEGRO_BITMAP *TILE);
+void KAMERA(float *POZYCJA_KAMERY, float x, float y, int W, int H);
+
+int main()
+{
+	ALLEGRO_DISPLAY *okno = NULL;
+	ALLEGRO_EVENT_QUEUE *kolejka = NULL;
+	ALLEGRO_TIMER *stoper = NULL;
+	ALLEGRO_BITMAP *TILEMAPA = NULL;
+	ALLEGRO_TRANSFORM kamera;
+	float POZYCJA_KAMERY[2] = { 0,0 };
+
+	
+	int mapa[100][100];
+
+	if (!al_init()) {
+		al_show_native_message_box(okno, "Błąd", "Błąd",
+			"Nie znaleziono biblioteki ALLEGRO5!", 0, ALLEGRO_MESSAGEBOX_ERROR);
+		return -1;
+	}
+	if (!al_init_image_addon()) {
+		al_show_native_message_box(okno, "Błąd", "Błąd",
+		"Nie udało się zastosować biblioteki al_init_image_addon!", 0, ALLEGRO_MESSAGEBOX_ERROR);
+		return -1;
+	}
+	if (!al_install_keyboard()) {
+		al_show_native_message_box(okno, "Błąd", "Błąd",
+			"Nie udało się zamontować klawiatury!", 0, ALLEGRO_MESSAGEBOX_ERROR);
+		return -1;
+	}
+	stoper = al_create_timer(1.0 / FPS);
+	if (!stoper) {
+		al_show_native_message_box(okno, "Błąd", "Błąd", 
+		"Nie udało się zamontować stopera!", 0, ALLEGRO_MESSAGEBOX_ERROR);
+		return -1;
+	}
+	okno = al_create_display(1024, 640);
+	if (!okno) {
+		al_show_native_message_box(okno, "Błąd", "Błąd",
+			"Nie udało się stworzyć okna!", 0, ALLEGRO_MESSAGEBOX_ERROR);
+		al_destroy_timer(stoper);
+		return -1;
+	}
+	
+	grafika = al_load_bitmap("Gracz.png");
+	
+	if (!grafika) {
+		al_show_native_message_box(okno, "Błąd", "Błąd", 
+		"Nie udało się zamontować grafiki!", 0, ALLEGRO_MESSAGEBOX_ERROR);
+		al_destroy_display(okno);
+		al_destroy_timer(stoper);
+		return -1;
+	}
+
+	TILEMAPA = al_load_bitmap("grafika.jpg");
+
+	if (!TILEMAPA) {
+		al_show_native_message_box(okno, "Błąd", "Błąd",
+			"Nie udało się zamontować TILEMAPY!", 0, ALLEGRO_MESSAGEBOX_ERROR);
+		al_destroy_display(okno);
+		al_destroy_timer(stoper);
+		return -1;
+	}
+	ZAŁADUJ_MAPĘ("Mapa.txt", mapa);
+
+	kolejka = al_create_event_queue();
+	if (!kolejka) {
+		cout << "Nie udało się stworzyć kolejki zdarzeń\n";
+		al_destroy_display(okno);
+		al_destroy_timer(stoper);
+		al_destroy_bitmap(grafika);
+		return -1;
+	}
+	al_register_event_source(kolejka, al_get_display_event_source(okno));
+
+	al_register_event_source(kolejka, al_get_timer_event_source(stoper));
+
+	al_register_event_source(kolejka, al_get_keyboard_event_source());
+
+	ALLEGRO_KEYBOARD_STATE stan_kl;
+	
+	al_convert_mask_to_alpha(grafika, al_map_rgb(255, 255, 255));
+	al_flip_display();
+	al_start_timer(stoper);
+	while (!wyjście) {
+		ALLEGRO_EVENT zdarzenie;
+		al_wait_for_event(kolejka, &zdarzenie);
+		al_get_keyboard_state(&stan_kl);
+
+		if (zdarzenie.type == ALLEGRO_EVENT_TIMER) {
+			if (al_key_down(&stan_kl, ALLEGRO_KEY_LEFT) && grafika_x >= ruch ) {
+				VELX = -ruch;
+				SY = 32;
+				SX += 32;
+				if (SX == 32)
+					SX = 64;
+				else if (SX == 96)
+					SX = 0;
+			}
+			else if (al_key_down(&stan_kl, ALLEGRO_KEY_RIGHT) && grafika_x <= ROZM_MAPA_X*32 - ROZMIAR_GRAFIKI - ruch ) {
+				VELX = ruch;
+				SY = 64;
+				SX += 32;
+				if (SX == 32)
+					SX = 64;
+				else if (SX == 96)
+					SX = 0;
+			}
+			else {
+				VELX = 0;
+				SX = 32;
+			}
+			if (al_key_down(&stan_kl, ALLEGRO_KEY_UP) && grafika_y >= pr_skoku && skok ) {
+				VELY = -pr_skoku;
+				skok = false;
+			}
+			if (!skok)
+				VELY += grawitacja;
+			else
+				VELY = 0;
+
+			grafika_x += VELX;
+			grafika_y += VELY;
+
+			skok = (grafika_y + ROZMIAR_GRAFIKI >= ROZM_MAPA_Y*TILE_ROZMIAR);
+			if (skok)
+				grafika_y =ROZM_MAPA_Y*32 - ROZMIAR_GRAFIKI; //mnożę wysokość mapy *32 (czyli rozmiar pojedyńczej kostki w mapie)
+			//MAPA KOLIZJA
+			TILE_KOLIZJA(mapa);		
+			przerysuj = true;
+
+			KAMERA(POZYCJA_KAMERY, grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI);
+			al_identity_transform(&kamera);
+			al_translate_transform(&kamera, -POZYCJA_KAMERY[0], -POZYCJA_KAMERY[1]);
+			al_use_transform(&kamera);
+		}
+		else if (zdarzenie.type == ALLEGRO_EVENT_DISPLAY_CLOSE ) {
+			break;
+		}
+
+		else if (zdarzenie.type == ALLEGRO_EVENT_KEY_UP) {
+			switch (zdarzenie.keyboard.keycode) {
+			case ALLEGRO_KEY_ESCAPE:
+				wyjście = true;
+			}
+		}
+		if (przerysuj && al_is_event_queue_empty(kolejka)) {
+			przerysuj = false;
+			al_clear_to_color(al_map_rgb(0, 255, 0));
+			RYSUJ_MAPĘ(mapa, TILEMAPA);
+			al_draw_bitmap_region(grafika,SX, SY , ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, grafika_x, grafika_y,0);
+			al_flip_display();
+		}
+		
+	}
+	al_destroy_bitmap(TILEMAPA);
+	al_destroy_bitmap(grafika);
+	al_destroy_timer(stoper);
+	al_destroy_display(okno);
+	al_destroy_event_queue(kolejka);
+	return 0;
+}
 
 bool KOLIZJA(int b1_x, int b1_y, int b1_w, int b1_h, int b2_x, int b2_y, int b2_w, int b2_h)
 {
@@ -45,266 +216,86 @@ bool KOLIZJA(int b1_x, int b1_y, int b1_w, int b1_h, int b2_x, int b2_y, int b2_
 	// collision
 	return true;
 }
-int main()
-{
-	ALLEGRO_DISPLAY *okno = NULL;
-	ALLEGRO_EVENT_QUEUE *kolejka = NULL;
-	ALLEGRO_TIMER *stoper = NULL;
-	
-	if (!al_init()) {
-		cout << "Nie znaleziono biblioteki ALLEGRO5\n";
-			return -1;
-	}
-	if (!al_install_keyboard()) {
-		cout << "Nie udało się zamontować klawiatury w programie\n";
-		return -1;
-	}
-	stoper = al_create_timer(1.0 / FPS);
-	if (!stoper) {
-		cout << "Nie udało się stworzyć stopera\n";
-		return -1;
-	}
-	okno = al_create_display(1024, 640);
-	if (!okno) {
-		cout << "Nie udało się otworzyć okna\n";
-		al_destroy_timer(stoper);
-		return -1;
-	}
-	grafika = al_create_bitmap(ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI);
-	if (!grafika) {
-		cout << "Nie udało się stworzyć grafiki!\n";
-		al_destroy_display(okno);
-		al_destroy_timer(stoper);
-		return -1;
-	}
 
-	al_set_target_bitmap(grafika);
-	al_clear_to_color(al_map_rgb(255, 0, 0));
-	al_set_target_bitmap(al_get_backbuffer(okno));
-	
-	podest[0] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[0]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
 
-	podest[1] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[1]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
+void ZAŁADUJ_MAPĘ(const char *nazwa_pliku, int mapa[][100]) {
+	ifstream otwórz_plik(nazwa_pliku);
+	if (otwórz_plik.is_open()) {
+		string wiersz;
+		getline(otwórz_plik, wiersz);
 
-	podest[2] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[2]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
+		wiersz.erase(remove(wiersz.begin(), wiersz.end(), ' '), wiersz.end());
+		ROZM_MAPA_X = wiersz.length();
 
-	podest[3] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[3]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[4] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[4]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[5] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[5]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[6] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[6]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[7] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[7]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[8] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[8]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[9] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[9]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[10] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[10]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[11] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[11]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[12] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[12]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[13] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[13]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	podest[14] = al_create_bitmap(PODEST_W, PODEST_H);
-	al_set_target_bitmap(podest[14]);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-
-	al_set_target_bitmap(al_get_backbuffer(okno));
-
-	kolejka = al_create_event_queue();
-	if (!kolejka) {
-		cout << "Nie udało się stworzyć kolejki zdarzeń\n";
-		al_destroy_display(okno);
-		al_destroy_timer(stoper);
-		al_destroy_bitmap(grafika);
-		al_destroy_bitmap(podest[0]);
-		al_destroy_bitmap(podest[1]);
-		return -1;
-	}
-	al_register_event_source(kolejka, al_get_display_event_source(okno));
-
-	al_register_event_source(kolejka, al_get_timer_event_source(stoper));
-
-	al_register_event_source(kolejka, al_get_keyboard_event_source());
-
-	ALLEGRO_KEYBOARD_STATE stan_kl;
-	
-	al_flip_display();
-	al_start_timer(stoper);
-	while (!wyjście) {
-		ALLEGRO_EVENT zdarzenie;
-		al_wait_for_event(kolejka, &zdarzenie);
-		al_get_keyboard_state(&stan_kl);
-
-		if (zdarzenie.type == ALLEGRO_EVENT_TIMER) {
-			if (al_key_down(&stan_kl, ALLEGRO_KEY_LEFT) && grafika_x >= ruch ) {
-				VELX = -ruch;
-				kierunek = true;
-			}
-			else if (al_key_down(&stan_kl, ALLEGRO_KEY_RIGHT) && grafika_x <= OBRAZ_W - ROZMIAR_GRAFIKI - ruch ) {
-				VELX = ruch;
-				kierunek = true;
-			}
-			else
-				VELX = 0;
-
-			if (al_key_down(&stan_kl, ALLEGRO_KEY_UP) && grafika_y >= pr_skoku && skok ) {
-				VELY = -pr_skoku;
-				skok = false;
-				kierunek = true;
-			}
-			przerysuj = true;
-			if (!skok)
-				VELY += grawitacja;
-			else
-				VELY = 0;
-
-			grafika_x += VELX;
-			grafika_y += VELY;
-
-			skok = (grafika_y + ROZMIAR_GRAFIKI >= OBRAZ_H);
-			if (skok)
-				grafika_y = OBRAZ_H - ROZMIAR_GRAFIKI;
-			//PODEST 1 x = 0, y = 0
-			PODEST_KOLIZJA(0, 0);
-			//PODEST 2 x = 75, y = 75
-			PODEST_KOLIZJA(75, 75);
-			//PODEST 3 x = 150, y = 150
-			PODEST_KOLIZJA(150, 150);
-			//PODEST 4 x = 75, y = 225
-			PODEST_KOLIZJA(75, 225);
-			//PODEST 5 x = 150, y = 300
-			PODEST_KOLIZJA(150, 300);
-			//PODEST 6 x = 225, y = 375
-			PODEST_KOLIZJA(225, 375);
-			//PODEST 7 x = 300, y = 450
-			PODEST_KOLIZJA(300, 450);
-			//PODEST 8 x = 375, y = 525
-			PODEST_KOLIZJA(375, 525);
-			//PODEST 9 x = 450, y = 525
-			PODEST_KOLIZJA(450, 525);
-			//PODEST 10 x = 525, y = 460
-			PODEST_KOLIZJA(525, 460);
-			//PODEST 11 x = 600, Y = 475
-			PODEST_KOLIZJA(600, 475);
-			//PODEST 12 x = 600, y = 400
-			PODEST_KOLIZJA(675, 400);
-			//PODEST 13 x = 750, y = 475
-			PODEST_KOLIZJA(750, 475);
-			//PODEST 14 x = 825, y = 400
-			PODEST_KOLIZJA(825, 400);
-			//PODEST 15 x = 870, y = 475
-			PODEST_KOLIZJA(870, 475);
-		}
-		else if (zdarzenie.type == ALLEGRO_EVENT_DISPLAY_CLOSE ) {
-			break;
-		}
-
-		else if (zdarzenie.type == ALLEGRO_EVENT_KEY_UP) {
-			switch (zdarzenie.keyboard.keycode) {
-			case ALLEGRO_KEY_ESCAPE:
-				wyjście = true;
+		otwórz_plik.seekg(0, ios::beg);
+		while (!otwórz_plik.eof()) {
+			otwórz_plik >> mapa[LICZ_X][LICZ_Y];
+			LICZ_X++;
+			if (LICZ_X >= ROZM_MAPA_X) {
+				LICZ_X = 0;
+				LICZ_Y++;
 			}
 		}
-		if (przerysuj && al_is_event_queue_empty(kolejka)) {
-			przerysuj = false;
-			al_clear_to_color(al_map_rgb(0,100, 0));
-			al_draw_bitmap(podest[0], PODEST_X, PODEST_Y, 0);
-			al_draw_bitmap(podest[1], PODEST_X + 75, PODEST_Y - 75, 0);
-			al_draw_bitmap(podest[2], PODEST_X + 150, PODEST_Y - 150, 0);
-			al_draw_bitmap(podest[3], PODEST_X + 75, PODEST_Y - 225, 0);
-			al_draw_bitmap(podest[4], PODEST_X + 150, PODEST_Y - 300,0);
-			al_draw_bitmap(podest[5], PODEST_X + 225, PODEST_Y - 375, 0);
-			al_draw_bitmap(podest[6], PODEST_X + 300, PODEST_Y - 450, 0);
-			al_draw_bitmap(podest[7], PODEST_X + 375, PODEST_Y - 525, 0);
-			al_draw_bitmap(podest[8], PODEST_X + 450, PODEST_Y - 525, 0);
-			al_draw_bitmap(podest[9], PODEST_X + 525, PODEST_Y - 460, 0);
-			al_draw_bitmap(podest[10], PODEST_X + 600, PODEST_Y - 475, 0);
-			al_draw_bitmap(podest[11], PODEST_X + 675, PODEST_Y - 400, 0);
-			al_draw_bitmap(podest[12], PODEST_X + 750, PODEST_Y - 475, 0);
-			al_draw_bitmap(podest[13], PODEST_X + 825, PODEST_Y - 400, 0);
-			al_draw_bitmap(podest[14], PODEST_X + 870, PODEST_Y - 475, 0);
-			al_draw_bitmap(grafika, grafika_x, grafika_y, 0);
-			al_flip_display();
-		}
-		
+		ROZM_MAPA_Y = LICZ_Y;
 	}
-	al_destroy_bitmap(podest[0]);
-	al_destroy_bitmap(podest[1]);
-	al_destroy_bitmap(podest[2]);
-	al_destroy_bitmap(podest[3]);
-	al_destroy_bitmap(podest[4]);
-	al_destroy_bitmap(podest[5]);
-	al_destroy_bitmap(podest[6]);
-	al_destroy_bitmap(podest[7]);
-	al_destroy_bitmap(podest[8]);
-	al_destroy_bitmap(podest[9]);
-	al_destroy_bitmap(podest[10]);
-	al_destroy_bitmap(podest[11]);
-	al_destroy_bitmap(podest[12]);
-	al_destroy_bitmap(podest[13]);
-	al_destroy_bitmap(podest[14]);
-	al_destroy_bitmap(grafika);
-	al_destroy_timer(stoper);
-	al_destroy_display(okno);
-	al_destroy_event_queue(kolejka);
-	return 0;
+	else {}
 }
 
-void PODEST_KOLIZJA(int x, int y) {
-	if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + x, PODEST_Y - y + PODEST_H, PODEST_W, PODEST_H)) {
-		if (kierunek) {
-			VELY = pr_skoku;
-			skok = false;
-			kierunek = false;
-		}
-		else if (kierunek) {
-			VELY = pr_skoku;
-			skok = false;
-			kierunek = false;
-		}
-		else if (kierunek) {
-			VELY = pr_skoku;
-			skok = false;
-			kierunek = false;
+void RYSUJ_MAPĘ(int mapa[][100], ALLEGRO_BITMAP *TILE ) {
+	for (int i = 0; i < ROZM_MAPA_X; i++) {
+		for (int j = 0; j < ROZM_MAPA_Y; j++) {
+			if (mapa[i][j] == 0)
+				al_draw_bitmap_region(TILE, 32, 32, 32, 32, i * 32,j* 32, 0);
+			else if(mapa[i][j]==1)
+				al_draw_bitmap_region(TILE, 64, 0, 32, 32, i * 32, j * 32, 0);
+			else  if(mapa[i][j]==2)
+				al_draw_bitmap_region(TILE, 96,32, 32, 32, i * 32, j * 32, 0);
+			else  if (mapa[i][j] == 3)
+				al_draw_bitmap_region(TILE, 96, 0, 32, 32, i * 32, j * 32, 0);
+			else  if (mapa[i][j] == 4)
+				al_draw_bitmap_region(TILE, 96, 64, 32, 32, i * 32, j * 32, 0);
+			else  if (mapa[i][j] == 5)
+				al_draw_bitmap_region(TILE, 64, 64, 32, 32, i * 32, j * 32, 0);
+			else  if (mapa[i][j] == 6)
+				al_draw_bitmap_region(TILE, 32, 0, 32, 32, i * 32, j * 32, 0);
+			else  if (mapa[i][j] == 7)
+				al_draw_bitmap_region(TILE, 64, 32, 32, 32, i * 32, j * 32, 0);
+			else  if (mapa[i][j] == 8)
+				al_draw_bitmap_region(TILE, 0, 0, 32, 32, i * 32, j * 32, 0);
 		}
 	}
-	if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, PODEST_X + x, PODEST_Y - y - PODEST_H, PODEST_W, PODEST_H)) {
-		skok = (grafika_y + ROZMIAR_GRAFIKI >= PODEST_Y - y);
-		if (skok)
-			grafika_y = PODEST_Y - y - ROZMIAR_GRAFIKI;
+}
+void TILE_KOLIZJA(int mapa[][100]) {
+	for (int i = 0; i < ROZM_MAPA_X; i++) {
+		for (int j = 0; j < ROZM_MAPA_Y; j++) {
+			if (mapa[i][j] == 0 ) {
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR + 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					VELY += grawitacja;
+					skok = false;
+				}
+				else if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR -32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					skok = (grafika_y + ROZMIAR_GRAFIKI >= j*TILE_ROZMIAR);
+					if (skok)
+						grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;	
+				}
+			}
+		}
+	}
+}
+
+void KAMERA(float *POZYCJA_KAMERY, float x, float y, int W, int H) {
+	if (x > OBRAZ_W/2 ) {
+		POZYCJA_KAMERY[0] = -(ROZM_MAPA_X)+(x + W);
+		if (POZYCJA_KAMERY[0] < 0)
+			POZYCJA_KAMERY[0] = 0;
+		if (POZYCJA_KAMERY[0] > ROZM_MAPA_X - OBRAZ_W)
+			POZYCJA_KAMERY[0] = grafika_x - OBRAZ_W / 2;
+	}
+	if (y > OBRAZ_H / 2) {
+		POZYCJA_KAMERY[1] = -(ROZM_MAPA_Y)+(y + H);
+		if (POZYCJA_KAMERY[1] < 0)
+			POZYCJA_KAMERY[1] = 0;
+		if (POZYCJA_KAMERY[1] > ROZM_MAPA_Y - OBRAZ_H / 2)
+			POZYCJA_KAMERY[1] = grafika_y - (OBRAZ_H-100);
 	}
 }
