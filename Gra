@@ -20,14 +20,19 @@ ALLEGRO_BITMAP *grafika = NULL;
 float grafika_x = OBRAZ_W / 20.0 - ROZMIAR_GRAFIKI / 2.0;
 float grafika_y = OBRAZ_H - ROZMIAR_GRAFIKI;
 const float ruch = 4.0;
+int kierunek = 0;
+bool klucz = false;
+bool farba = false;
 
 bool skok = false;
-float pr_skoku = 14;
+float pr_skoku = 16;
 const float grawitacja = 1;
 float VELX=0, VELY=0;
 
 bool przerysuj = true;
 bool wyjście = false;
+
+time_t start, koniec;
 
 
 bool aktywny = false;
@@ -38,8 +43,8 @@ int LICZ_X = 0, LICZ_Y = 0, ROZM_MAPA_X, ROZM_MAPA_Y;
 
 void ZAŁADUJ_MAPĘ(const char *nazwa_pliku, int mapa[][100]);
 
-void TILE_KOLIZJA(int mapa[][100]);
-void RYSUJ_MAPĘ(int mapa[][100], ALLEGRO_BITMAP *TILE);
+void TILE_KOLIZJA(int mapa[][100], int kier, float *kamera, ALLEGRO_DISPLAY *okno);
+void RYSUJ_MAPĘ(int mapa[][100], ALLEGRO_BITMAP *TILE, ALLEGRO_BITMAP *KLUCZE);
 void KAMERA(float *POZYCJA_KAMERY, float x, float y, int W, int H);
 
 int main()
@@ -48,6 +53,7 @@ int main()
 	ALLEGRO_EVENT_QUEUE *kolejka = NULL;
 	ALLEGRO_TIMER *stoper = NULL;
 	ALLEGRO_BITMAP *TILEMAPA = NULL;
+	ALLEGRO_BITMAP *NARZEDZIA = NULL;
 	ALLEGRO_TRANSFORM kamera;
 	float POZYCJA_KAMERY[2] = { 0,0 };
 
@@ -55,29 +61,29 @@ int main()
 	int mapa[100][100];
 
 	if (!al_init()) {
-		al_show_native_message_box(okno, "Błąd", "Błąd",
+		al_show_native_message_box(okno, "Error", "Error",
 			"Nie znaleziono biblioteki ALLEGRO5!", 0, ALLEGRO_MESSAGEBOX_ERROR);
 		return -1;
 	}
 	if (!al_init_image_addon()) {
-		al_show_native_message_box(okno, "Błąd", "Błąd",
+		al_show_native_message_box(okno, "Error", "Error",
 		"Nie udało się zastosować biblioteki al_init_image_addon!", 0, ALLEGRO_MESSAGEBOX_ERROR);
 		return -1;
 	}
 	if (!al_install_keyboard()) {
-		al_show_native_message_box(okno, "Błąd", "Błąd",
+		al_show_native_message_box(okno, "Error", "Error",
 			"Nie udało się zamontować klawiatury!", 0, ALLEGRO_MESSAGEBOX_ERROR);
 		return -1;
 	}
 	stoper = al_create_timer(1.0 / FPS);
 	if (!stoper) {
-		al_show_native_message_box(okno, "Błąd", "Błąd", 
+		al_show_native_message_box(okno, "Error", "Error",
 		"Nie udało się zamontować stopera!", 0, ALLEGRO_MESSAGEBOX_ERROR);
 		return -1;
 	}
 	okno = al_create_display(1024, 640);
 	if (!okno) {
-		al_show_native_message_box(okno, "Błąd", "Błąd",
+		al_show_native_message_box(okno, "Error", "Error",
 			"Nie udało się stworzyć okna!", 0, ALLEGRO_MESSAGEBOX_ERROR);
 		al_destroy_timer(stoper);
 		return -1;
@@ -86,7 +92,7 @@ int main()
 	grafika = al_load_bitmap("Gracz.png");
 	
 	if (!grafika) {
-		al_show_native_message_box(okno, "Błąd", "Błąd", 
+		al_show_native_message_box(okno, "Error", "Error",
 		"Nie udało się zamontować grafiki!", 0, ALLEGRO_MESSAGEBOX_ERROR);
 		al_destroy_display(okno);
 		al_destroy_timer(stoper);
@@ -96,11 +102,19 @@ int main()
 	TILEMAPA = al_load_bitmap("grafika.jpg");
 
 	if (!TILEMAPA) {
-		al_show_native_message_box(okno, "Błąd", "Błąd",
+		al_show_native_message_box(okno, "Error", "Error",
 			"Nie udało się zamontować TILEMAPY!", 0, ALLEGRO_MESSAGEBOX_ERROR);
 		al_destroy_display(okno);
 		al_destroy_timer(stoper);
 		return -1;
+	}
+
+	NARZEDZIA = al_load_bitmap("klucze.png");
+	if (!NARZEDZIA) {
+		al_show_native_message_box(okno, "Error", "Error", "Nie udalo sie zaladowac narzedzi!", 0, ALLEGRO_MESSAGEBOX_ERROR);
+		al_destroy_display(okno);
+		al_destroy_timer(stoper);
+		al_destroy_bitmap(grafika);
 	}
 	ZAŁADUJ_MAPĘ("Mapa.txt", mapa);
 
@@ -130,6 +144,7 @@ int main()
 
 		if (zdarzenie.type == ALLEGRO_EVENT_TIMER) {
 			if (al_key_down(&stan_kl, ALLEGRO_KEY_LEFT) && grafika_x >= ruch ) {
+				kierunek = 1;
 				VELX = -ruch;
 				SY = 32;
 				SX += 32;
@@ -139,6 +154,7 @@ int main()
 					SX = 0;
 			}
 			else if (al_key_down(&stan_kl, ALLEGRO_KEY_RIGHT) && grafika_x <= ROZM_MAPA_X*32 - ROZMIAR_GRAFIKI - ruch ) {
+				kierunek = 2;
 				VELX = ruch;
 				SY = 64;
 				SX += 32;
@@ -148,6 +164,7 @@ int main()
 					SX = 0;
 			}
 			else {
+				kierunek = 0;
 				VELX = 0;
 				SX = 32;
 			}
@@ -165,12 +182,12 @@ int main()
 
 			skok = (grafika_y + ROZMIAR_GRAFIKI >= ROZM_MAPA_Y*TILE_ROZMIAR);
 			if (skok)
-				grafika_y =ROZM_MAPA_Y*32 - ROZMIAR_GRAFIKI; //mnożę wysokość mapy *32 (czyli rozmiar pojedyńczej kostki w mapie)
+				grafika_y =ROZM_MAPA_Y*TILE_ROZMIAR - ROZMIAR_GRAFIKI; //mnożę wysokość mapy *32 (czyli rozmiar pojedyńczej kostki w mapie)
+			KAMERA(POZYCJA_KAMERY, grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI);
 			//MAPA KOLIZJA
-			TILE_KOLIZJA(mapa);		
+			TILE_KOLIZJA(mapa, kierunek, POZYCJA_KAMERY, okno);		
 			przerysuj = true;
 
-			KAMERA(POZYCJA_KAMERY, grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI);
 			al_identity_transform(&kamera);
 			al_translate_transform(&kamera, -POZYCJA_KAMERY[0], -POZYCJA_KAMERY[1]);
 			al_use_transform(&kamera);
@@ -188,7 +205,7 @@ int main()
 		if (przerysuj && al_is_event_queue_empty(kolejka)) {
 			przerysuj = false;
 			al_clear_to_color(al_map_rgb(0, 255, 0));
-			RYSUJ_MAPĘ(mapa, TILEMAPA);
+			RYSUJ_MAPĘ(mapa, TILEMAPA, NARZEDZIA);
 			al_draw_bitmap_region(grafika,SX, SY , ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, grafika_x, grafika_y,0);
 			al_flip_display();
 		}
@@ -238,46 +255,206 @@ void ZAŁADUJ_MAPĘ(const char *nazwa_pliku, int mapa[][100]) {
 		}
 		ROZM_MAPA_Y = LICZ_Y;
 	}
-	else {}
 }
 
-void RYSUJ_MAPĘ(int mapa[][100], ALLEGRO_BITMAP *TILE ) {
+void RYSUJ_MAPĘ(int mapa[][100], ALLEGRO_BITMAP *TILE, ALLEGRO_BITMAP *KLUCZE ) {
 	for (int i = 0; i < ROZM_MAPA_X; i++) {
 		for (int j = 0; j < ROZM_MAPA_Y; j++) {
 			if (mapa[i][j] == 0)
-				al_draw_bitmap_region(TILE, 32, 32, 32, 32, i * 32,j* 32, 0);
-			else if(mapa[i][j]==1)
-				al_draw_bitmap_region(TILE, 64, 0, 32, 32, i * 32, j * 32, 0);
-			else  if(mapa[i][j]==2)
-				al_draw_bitmap_region(TILE, 96,32, 32, 32, i * 32, j * 32, 0);
+				al_draw_bitmap_region(TILE, 32, 32, 32, 32, i * 32, j * 32, 0);
+			//klucz
+			else if (mapa[i][j] == 1)
+				al_draw_bitmap_region(KLUCZE, 32, 0, 32, 32, i * 32, j * 32, 0);
+			else  if (mapa[i][j] == 2)
+				al_draw_bitmap_region(TILE, 96, 32, 32, 32, i * 32, j * 32, 0);
 			else  if (mapa[i][j] == 3)
 				al_draw_bitmap_region(TILE, 96, 0, 32, 32, i * 32, j * 32, 0);
-			else  if (mapa[i][j] == 4)
-				al_draw_bitmap_region(TILE, 96, 64, 32, 32, i * 32, j * 32, 0);
+			//farba
+			else if (mapa[i][j] == 4)
+				al_draw_bitmap_region(KLUCZE, 32, 32, 32, 32, i * 32, j * 32, 0);
+			//drzwi
 			else  if (mapa[i][j] == 5)
-				al_draw_bitmap_region(TILE, 64, 64, 32, 32, i * 32, j * 32, 0);
+				al_draw_bitmap_region(KLUCZE, 32, 64, 32, 32, i * 32, j * 32, 0);
 			else  if (mapa[i][j] == 6)
 				al_draw_bitmap_region(TILE, 32, 0, 32, 32, i * 32, j * 32, 0);
 			else  if (mapa[i][j] == 7)
 				al_draw_bitmap_region(TILE, 64, 32, 32, 32, i * 32, j * 32, 0);
 			else  if (mapa[i][j] == 8)
 				al_draw_bitmap_region(TILE, 0, 0, 32, 32, i * 32, j * 32, 0);
+			//flaga
+			else if (mapa[i][j] == 9)
+				al_draw_bitmap_region(KLUCZE, 32, 96, 32, 32, i * 32, j * 32, 0);
 		}
 	}
 }
-void TILE_KOLIZJA(int mapa[][100]) {
+void TILE_KOLIZJA(int mapa[][100], int kier, float *kamera, ALLEGRO_DISPLAY *okno) {
+	int l_kolizji = 0;
 	for (int i = 0; i < ROZM_MAPA_X; i++) {
 		for (int j = 0; j < ROZM_MAPA_Y; j++) {
+			/***0 cegła*/
 			if (mapa[i][j] == 0 ) {
-				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR + 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR + 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+						VELY += grawitacja;
+						skok = false;
+					}
+					if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR+32, j * TILE_ROZMIAR + 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+						VELY += grawitacja;
+						skok = false;
+					}
+					if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR, TILE_ROZMIAR, TILE_ROZMIAR)) {
+						if (kier == 1) {
+							grafika_x += ruch;
+							SX = 32;
+						}
+						if (kier == 2) {
+							grafika_x -= ruch;
+							SX = 32;
+						}
+					}
+					if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR - 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+						skok = (grafika_y + ROZMIAR_GRAFIKI >= j * TILE_ROZMIAR);
+						if (skok)
+							grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;
+				}
+			}
+			//klucz
+			if (mapa[i][j] == 1) {
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					if (kier == 1) {
+						grafika_x += ruch;
+						SX = 32;
+					}
+					if (kier == 2) {
+						grafika_x -= ruch;
+						SX = 32;
+					}
+				}
+				else if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR + 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
 					VELY += grawitacja;
 					skok = false;
 				}
-				else if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR -32, TILE_ROZMIAR, TILE_ROZMIAR)) {
-					skok = (grafika_y + ROZMIAR_GRAFIKI >= j*TILE_ROZMIAR);
-					if (skok)
-						grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;	
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR - 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					time(&start);
+					skok = (grafika_y + ROZMIAR_GRAFIKI >= j * TILE_ROZMIAR);
+					if (skok) {
+						grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;
+					}
+					klucz = true;
+					mapa[i][j] = 2;
 				}
+			}
+			/***3 błoto*/
+			if (mapa[i][j] == 3) {
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					if (kier == 1)
+						grafika_x += 1;
+					if (kier == 2)
+						grafika_x -= 1;
+				}
+			}
+			//farba
+			if (mapa[i][j] == 4) {
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					if (kier == 1) {
+						farba = true;
+						mapa[i][j] = 2;
+					}
+					if (kier == 2) {
+						farba = true;
+						mapa[i][j] = 2;
+					}
+				}
+				else if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR + 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					VELY += grawitacja;
+					skok = false;
+				}
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR - 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					time(&start);
+					skok = (grafika_y + ROZMIAR_GRAFIKI >= j * TILE_ROZMIAR);
+					if (skok) {
+						grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;
+					}
+					farba = true;
+					mapa[i][j] = 2;
+				}
+			}
+			//drzwi
+			if (mapa[i][j] == 5) {
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					if (kier == 1) {
+						if (klucz) {
+							mapa[i][j] = 2;
+							klucz = false;
+						}
+						grafika_x += ruch;
+						SX = 32;
+					}
+					if (kier == 2) {
+						if (klucz) {
+							mapa[i][j] = 2;
+							klucz = false;
+						}
+						grafika_x -= ruch;
+						SX = 32;
+					}
+				}
+				else if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR + 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					VELY += grawitacja;
+					skok = false;
+				}
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR - 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					time(&start);
+					skok = (grafika_y + ROZMIAR_GRAFIKI >= j * TILE_ROZMIAR);
+					if (skok) {
+						grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;
+					}
+					if (klucz) {
+						mapa[i][j] = 2;
+						klucz = false;
+					}
+					}
+			}
+			/***7 lawa*/
+			if (mapa[i][j] == 7) {
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR , TILE_ROZMIAR, TILE_ROZMIAR)) {
+					al_show_native_message_box(okno, "Fail", "Porazka", "Sprobuj ponownie", 0, ALLEGRO_MESSAGEBOX_ERROR);
+					VELX = 0;
+					VELY = 0;
+					 grafika_x = ROZM_MAPA_X*TILE_ROZMIAR/2  - ROZMIAR_GRAFIKI;
+					 grafika_y = ROZM_MAPA_Y-100 - ROZMIAR_GRAFIKI;
+				}
+			}
+			/***8 gruz*/
+			if (mapa[i][j] == 8) {
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					if (kier == 1) {
+						grafika_x += ruch;
+						SX = 32;
+					}
+					if (kier == 2) {
+						grafika_x -= ruch;
+						SX = 32;
+					}
+				}
+				else if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR + 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					VELY += grawitacja;
+					skok = false;
+				}
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR - 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
+					time(&start);
+					skok = (grafika_y + ROZMIAR_GRAFIKI >= j * TILE_ROZMIAR);
+					if (skok) {
+						grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;
+					}	
+					mapa[i][j] = 2;
+				}
+			}
+			if (mapa[i][j] == 9) {
+				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR , TILE_ROZMIAR, TILE_ROZMIAR) && farba) {
+					al_show_native_message_box(okno, "Zwyciestwo", "Gratulacje", " ", 0, ALLEGRO_MESSAGEBOX_ERROR);
+					 farba = false;
+				}
+
 			}
 		}
 	}
@@ -291,7 +468,7 @@ void KAMERA(float *POZYCJA_KAMERY, float x, float y, int W, int H) {
 		if (POZYCJA_KAMERY[0] > ROZM_MAPA_X - OBRAZ_W)
 			POZYCJA_KAMERY[0] = grafika_x - OBRAZ_W / 2;
 	}
-	if (y > OBRAZ_H / 2) {
+	if (y > ROZM_MAPA_Y*TILE_ROZMIAR / 2) {
 		POZYCJA_KAMERY[1] = -(ROZM_MAPA_Y)+(y + H);
 		if (POZYCJA_KAMERY[1] < 0)
 			POZYCJA_KAMERY[1] = 0;
