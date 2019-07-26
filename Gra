@@ -32,9 +32,6 @@ float VELX=0, VELY=0;
 bool przerysuj = true;
 bool wyjście = false;
 
-time_t start, koniec;
-
-
 bool aktywny = false;
 float SX = 32, SY = 32;
 
@@ -334,7 +331,6 @@ void TILE_KOLIZJA(int mapa[][100], int kier, float *kamera, ALLEGRO_DISPLAY *okn
 					skok = false;
 				}
 				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR - 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
-					time(&start);
 					skok = (grafika_y + ROZMIAR_GRAFIKI >= j * TILE_ROZMIAR);
 					if (skok) {
 						grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;
@@ -369,7 +365,6 @@ void TILE_KOLIZJA(int mapa[][100], int kier, float *kamera, ALLEGRO_DISPLAY *okn
 					skok = false;
 				}
 				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR - 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
-					time(&start);
 					skok = (grafika_y + ROZMIAR_GRAFIKI >= j * TILE_ROZMIAR);
 					if (skok) {
 						grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;
@@ -403,7 +398,6 @@ void TILE_KOLIZJA(int mapa[][100], int kier, float *kamera, ALLEGRO_DISPLAY *okn
 					skok = false;
 				}
 				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR - 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
-					time(&start);
 					skok = (grafika_y + ROZMIAR_GRAFIKI >= j * TILE_ROZMIAR);
 					if (skok) {
 						grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;
@@ -441,7 +435,6 @@ void TILE_KOLIZJA(int mapa[][100], int kier, float *kamera, ALLEGRO_DISPLAY *okn
 					skok = false;
 				}
 				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR - 32, TILE_ROZMIAR, TILE_ROZMIAR)) {
-					time(&start);
 					skok = (grafika_y + ROZMIAR_GRAFIKI >= j * TILE_ROZMIAR);
 					if (skok) {
 						grafika_y = j * TILE_ROZMIAR - ROZMIAR_GRAFIKI;
@@ -449,10 +442,12 @@ void TILE_KOLIZJA(int mapa[][100], int kier, float *kamera, ALLEGRO_DISPLAY *okn
 					mapa[i][j] = 2;
 				}
 			}
+			//flaga
 			if (mapa[i][j] == 9) {
 				if (KOLIZJA(grafika_x, grafika_y, ROZMIAR_GRAFIKI, ROZMIAR_GRAFIKI, i * TILE_ROZMIAR, j * TILE_ROZMIAR , TILE_ROZMIAR, TILE_ROZMIAR) && farba) {
 					al_show_native_message_box(okno, "Zwyciestwo", "Gratulacje", " ", 0, ALLEGRO_MESSAGEBOX_ERROR);
 					 farba = false;
+					 wyjście = true;
 				}
 
 			}
